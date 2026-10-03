@@ -36,7 +36,7 @@ export abstract class CronField {
   readonly #wildcard: boolean = false;
   readonly #values: (number | string)[] = [];
 
-  protected readonly options: CronFieldOptions & { rawValue: string } = { rawValue: '' };
+  readonly options: CronFieldOptions & { rawValue: string } = { rawValue: '' };
 
   /**
    * Returns the minimum value allowed for this field.

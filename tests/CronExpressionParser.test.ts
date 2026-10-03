@@ -172,6 +172,60 @@ describe('CronExpressionParser', () => {
     });
   });
 
+  describe('day of month limited to a single locked month', () => {
+    test('day of month step only contains days existing in the locked month', () => {
+      const interval = CronExpressionParser.parse('0 0 16/5 6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([16, 21, 26]);
+    });
+
+    test('day of month list drops days that do not exist in the locked month', () => {
+      const interval = CronExpressionParser.parse('0 0 16,31 6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([16]);
+    });
+
+    test('day of month range only contains days existing in the locked month', () => {
+      const interval = CronExpressionParser.parse('0 0 25-31 6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([25, 26, 27, 28, 29, 30]);
+    });
+
+    test('day of month is untouched when multiple months are set', () => {
+      const interval = CronExpressionParser.parse('0 0 31 4,6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([31]);
+    });
+
+    test('day of month is untouched when month is a wildcard', () => {
+      const interval = CronExpressionParser.parse('0 0 31 * *');
+      expect(interval.fields.dayOfMonth.values).toEqual([31]);
+    });
+
+    test('february keeps the 29th so leap years still trigger', () => {
+      const interval = CronExpressionParser.parse('0 0 29 2 *', {
+        currentDate: new Date(2023, 0, 1),
+      });
+      expect(interval.fields.dayOfMonth.values).toEqual([29]);
+      const next = interval.next();
+      expect(next.getFullYear()).toEqual(2024);
+      expect(next.getMonth() + 1).toEqual(2);
+      expect(next.getDate()).toEqual(29);
+    });
+
+    test('limiting the day of month does not change the schedule', () => {
+      const options = {
+        currentDate: new CronDate('2019-06-01T11:00:00.000'),
+      };
+      const interval = CronExpressionParser.parse('0 12 16/5 6 *', options);
+      const expectedDates = [
+        new CronDate('2019-06-16T12:00:00.000'),
+        new CronDate('2019-06-21T12:00:00.000'),
+        new CronDate('2019-06-26T12:00:00.000'),
+        new CronDate('2020-06-16T12:00:00.000'),
+      ];
+      for (const expectedDate of expectedDates) {
+        expect(interval.next().toISOString()).toEqual(expectedDate.toISOString());
+      }
+    });
+  });
+
   describe('take multiple dates', () => {
     test('step', () => {
       const options = {

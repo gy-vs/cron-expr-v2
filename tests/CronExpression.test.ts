@@ -476,6 +476,34 @@ describe('CronExpression', () => {
       expect(str).toEqual(expected);
     });
 
+    test('stringify cron expression with day of month range step and single month value', () => {
+      const expected = '* * 9-18/3 16/5 6 *';
+      const interval = CronExpressionParser.parse('* * 9-20/3 16-26/5 jun *', {});
+      let str = interval.stringify(true);
+      expect(str).toEqual(expected);
+      str = CronExpression.fieldsToExpression(interval.fields).stringify(true);
+      expect(str).toEqual(expected);
+    });
+
+    test('stringify cron expression with day of month step and single month value is stable when reparsed', () => {
+      const expected = '* * 9-18/3 16/5 6 *';
+      const interval = CronExpressionParser.parse(expected, {});
+      expect(interval.fields.dayOfMonth.values).toEqual([16, 21, 26]);
+      let str = interval.stringify(true);
+      expect(str).toEqual(expected);
+      str = CronExpression.fieldsToExpression(interval.fields).stringify(true);
+      expect(str).toEqual(expected);
+    });
+
+    test('stringify cron expression drops days that do not exist in the single locked month', () => {
+      const expected = '0 0 0 25-30 6 *';
+      const interval = CronExpressionParser.parse('0 0 0 25-31 6 *', {});
+      let str = interval.stringify(true);
+      expect(str).toEqual(expected);
+      str = CronExpression.fieldsToExpression(interval.fields).stringify(true);
+      expect(str).toEqual(expected);
+    });
+
     test('stringify from fields out of order', () => {
       const expected = '1-5 1 1 1 1 1';
       const str = CronExpression.fieldsToExpression(

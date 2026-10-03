@@ -185,6 +185,30 @@ describe('CronFieldCollection', () => {
           }),
       ).toThrow('Invalid explicit day of month definition');
     });
+
+    test('should drop days that do not exist in the single locked month', () => {
+      const cronFields = new CronFieldCollection({
+        second: new CronSecond([0]),
+        minute: new CronMinute([0]),
+        hour: new CronHour([12]),
+        dayOfMonth: new CronDayOfMonth([16, 21, 26, 31]),
+        month: new CronMonth([6]), // June only has 30 days
+        dayOfWeek: new CronDayOfWeek([1]),
+      });
+      expect(cronFields.dayOfMonth.values).toEqual([16, 21, 26]);
+    });
+
+    test('should keep days that do not exist when multiple months are set', () => {
+      const cronFields = new CronFieldCollection({
+        second: new CronSecond([0]),
+        minute: new CronMinute([0]),
+        hour: new CronHour([12]),
+        dayOfMonth: new CronDayOfMonth([31]),
+        month: new CronMonth([4, 6]), // April and June only have 30 days
+        dayOfWeek: new CronDayOfWeek([1]),
+      });
+      expect(cronFields.dayOfMonth.values).toEqual([31]);
+    });
   });
 
   describe('CronFieldCollection.compactField', () => {

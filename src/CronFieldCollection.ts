@@ -159,8 +159,22 @@ export class CronFieldCollection {
     }
 
     if (month.values.length === 1 && !dayOfMonth.hasLastChar) {
-      if (!(parseInt(dayOfMonth.values[0] as string, 10) <= CronMonth.daysInMonth[month.values[0] - 1])) {
+      const daysInMonth = CronMonth.daysInMonth[month.values[0] - 1];
+      if (!(parseInt(dayOfMonth.values[0] as string, 10) <= daysInMonth)) {
         throw new Error('Invalid explicit day of month definition');
+      }
+      // When the month field is locked to a single month, drop days that don't exist in
+      // that month (e.g. the 31st in June) so the field values and their stringified form
+      // only contain real days. This cannot change the schedule since those days never
+      // occur. The wildcard flag and raw value are carried over so the field semantics
+      // (e.g. `*`/`?`) stay intact.
+      const existingValues = dayOfMonth.values;
+      const filteredValues = existingValues.filter((value) => typeof value !== 'number' || value <= daysInMonth);
+      if (filteredValues.length !== existingValues.length) {
+        dayOfMonth = new CronDayOfMonth(filteredValues, {
+          rawValue: dayOfMonth.options.rawValue,
+          wildcard: dayOfMonth.isWildcard,
+        });
       }
     }
 
