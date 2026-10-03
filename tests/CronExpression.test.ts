@@ -476,6 +476,22 @@ describe('CronExpression', () => {
       expect(str).toEqual(expected);
     });
 
+    test('stringify cron expression with day of month step exceeding the days of the single month', () => {
+      const expected = '* * 9-18/3 16/5 6 *';
+      const interval = CronExpressionParser.parse('* * 9-20/3 16-26/5 jun *', {});
+      const str = interval.stringify(true);
+      expect(str).toEqual(expected);
+      expect(CronExpressionParser.parse(str, {}).stringify(true)).toEqual(expected);
+    });
+
+    test('stringify cron expression with day of month range exceeding the days of the single month', () => {
+      const expected = '0 0 25-30 6 *';
+      const interval = CronExpressionParser.parse('0 0 25-31 6 *', {});
+      const str = interval.stringify();
+      expect(str).toEqual(expected);
+      expect(CronExpressionParser.parse(str, {}).stringify()).toEqual(expected);
+    });
+
     test('stringify from fields out of order', () => {
       const expected = '1-5 1 1 1 1 1';
       const str = CronExpression.fieldsToExpression(

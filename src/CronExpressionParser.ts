@@ -142,11 +142,43 @@ export class CronExpressionParser {
       second: new CronSecond(second, { rawValue: rawFields.second }),
       minute: new CronMinute(minute, { rawValue: rawFields.minute }),
       hour: new CronHour(hour, { rawValue: rawFields.hour }),
-      dayOfMonth: new CronDayOfMonth(dayOfMonth, { rawValue: rawFields.dayOfMonth }),
+      dayOfMonth: new CronDayOfMonth(
+        CronExpressionParser.#clampDayOfMonthToMonth(dayOfMonth, month, rawFields.dayOfMonth),
+        {
+          rawValue: rawFields.dayOfMonth,
+        },
+      ),
       month: new CronMonth(month, { rawValue: rawFields.month }),
       dayOfWeek: new CronDayOfWeek(dayOfWeek, { rawValue: rawFields.dayOfWeek, nthDayOfWeek }),
     });
     return new CronExpression(fields, { ...options, expression });
+  }
+
+  /**
+   * Clamp the day of month values to the days that actually exist in the month when the
+   * month field restricts the expression to a single month. Days that do not exist in
+   * that month (e.g. the 31st in June) can never be triggered, so dropping them does not
+   * change the schedule, while keeping the parsed values and the stringified expression
+   * free of impossible days and stable across parse/stringify cycles.
+   * @param {DayOfMonthRange[]} dayOfMonth - The parsed day of month values.
+   * @param {MonthRange[]} month - The parsed month values.
+   * @param {string} rawValue - The raw day of month value.
+   * @private
+   * @returns {DayOfMonthRange[]} The clamped day of month values.
+   */
+  static #clampDayOfMonthToMonth(
+    dayOfMonth: DayOfMonthRange[],
+    month: MonthRange[],
+    rawValue: string,
+  ): DayOfMonthRange[] {
+    if (month.length !== 1 || rawValue.includes('L')) {
+      return dayOfMonth;
+    }
+    const maxDay = CronMonth.daysInMonth[month[0] - 1];
+    const clamped = dayOfMonth.filter((value) => typeof value !== 'number' || value <= maxDay);
+    // Keep the original values when every day is out of range, so the field collection
+    // can reject the invalid explicit day of month definition.
+    return clamped.length > 0 ? clamped : dayOfMonth;
   }
 
   /**

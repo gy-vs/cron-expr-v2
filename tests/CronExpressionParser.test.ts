@@ -1103,6 +1103,57 @@ describe('CronExpressionParser', () => {
     });
   });
 
+  describe('day of month clamped to the days of a single month', () => {
+    test('day of month step values are limited to the days of the month', () => {
+      const interval = CronExpressionParser.parse('0 0 16/5 6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([16, 21, 26]);
+    });
+
+    test('day of month range is limited to the days of the month', () => {
+      const interval = CronExpressionParser.parse('0 0 25-31 6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([25, 26, 27, 28, 29, 30]);
+    });
+
+    test('day of month list drops days that do not exist in the month', () => {
+      const interval = CronExpressionParser.parse('0 0 16,31 6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([16]);
+    });
+
+    test('day of month keeps the 29th of February', () => {
+      const interval = CronExpressionParser.parse('0 0 28-31 2 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([28, 29]);
+    });
+
+    test('day of month is not clamped when multiple months are defined', () => {
+      const interval = CronExpressionParser.parse('0 0 31 4,6 *');
+      expect(interval.fields.dayOfMonth.values).toEqual([31]);
+    });
+
+    test('day of month is not clamped when month is a wildcard', () => {
+      const interval = CronExpressionParser.parse('0 0 31 * *');
+      expect(interval.fields.dayOfMonth.values).toEqual([31]);
+    });
+
+    test('invalid explicit day of month definition when no day exists in the month', () => {
+      expect(() => CronExpressionParser.parse('0 0 30 2 *')).toThrow('Invalid explicit day of month definition');
+    });
+
+    test('schedule is not changed by clamping the day of month', () => {
+      const interval = CronExpressionParser.parse('0 0 16/5 6 *', {
+        currentDate: '2023-06-01T00:00:00.000',
+      });
+      const expectedDates = [
+        new CronDate('2023-06-16T00:00:00.000'),
+        new CronDate('2023-06-21T00:00:00.000'),
+        new CronDate('2023-06-26T00:00:00.000'),
+        new CronDate('2024-06-16T00:00:00.000'),
+      ];
+      for (const expectedDate of expectedDates) {
+        expect(expectedDate.toISOString()).toEqual(interval.next().toISOString());
+      }
+    });
+  });
+
   describe('prev date', () => {
     test('prev should match correctly (issue #98) when milliseconds are greater than 0', () => {
       const options = {
